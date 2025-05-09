@@ -21,15 +21,15 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pytest pytest-cov requests
-      - name: Run tests with coverage
+      - name: Run tests with coverage and save log
         run: |
-          pytest --cov=./ --cov-report=xml --cov-report=term > result.log; exit_code=$?; tail -20 result.log
-          echo "PYTEST_EXIT_CODE=$exit_code" >> $GITHUB_ENV
+          pytest -v --cov=./ --cov-report=xml --cov-report=term | tee result.log
       - name: Send result to Discord
         if: always()
         run: |
+          SUMMARY=$(tail -40 result.log | sed ':a;N;$!ba;s/\n/\\n/g')
           COVERAGE=$(grep 'TOTAL' result.log | awk '{print $4}')
           STATUS="✅ 성공"
-          if [ "$PYTEST_EXIT_CODE" != "0" ]; then STATUS="❌ 실패"; fi
-          MSG="**[dl_practice] 테스트 결과: $STATUS**\n커버리지: $COVERAGE"
+          if grep -q "FAILED" result.log; then STATUS="❌ 실패"; fi
+          MSG="**[dl_practice] 테스트 결과: $STATUS**\n커버리지: $COVERAGE\n\n\n$SUMMARY"
           curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$MSG\"}" $DISCORD_WEBHOOK 

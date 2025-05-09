@@ -1,0 +1,35 @@
+name: Python CI with Coverage & Discord
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov requests
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=./ --cov-report=xml --cov-report=term > result.log; exit_code=$?; tail -20 result.log
+          echo "PYTEST_EXIT_CODE=$exit_code" >> $GITHUB_ENV
+      - name: Send result to Discord
+        if: always()
+        run: |
+          COVERAGE=$(grep 'TOTAL' result.log | awk '{print $4}')
+          STATUS="✅ 성공"
+          if [ "$PYTEST_EXIT_CODE" != "0" ]; then STATUS="❌ 실패"; fi
+          MSG="**[dl_practice] 테스트 결과: $STATUS**\n커버리지: $COVERAGE"
+          curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$MSG\"}" $DISCORD_WEBHOOK 

@@ -23,7 +23,7 @@ jobs:
           pip install pytest pytest-cov requests
       - name: Run tests with coverage and save log
         run: |
-          pytest -v --cov=./ --cov-report=xml --cov-report=term | tee result.log
+          PYTHONPATH=. pytest -v --cov=./ --cov-report=xml --cov-report=term | tee result.log
       - name: Send result to Discord
         if: always()
         run: |
